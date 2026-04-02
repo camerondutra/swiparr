@@ -533,6 +533,7 @@ export class MediaService {
           excludedThemes: sessionFilters?.excludedThemes,
           tmdbLanguages: sessionFilters?.tmdbLanguages,
           unplayedOnly: sessionFilters?.unplayedOnly,
+          mediaType: sessionFilters?.mediaType,
           limit: 1000, // Fetch large batch
           offset: 0,
         }, auth);
