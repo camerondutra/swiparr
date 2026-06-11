@@ -112,3 +112,18 @@ export const POPULAR_TMDB_WATCH_PROVIDER_NAMES = [
 export const ALLOWED_DEFAULT_PLEX_IMAGE_URL = "https://metadata-static.plex.tv";
 
 export const DEFAULT_LANGUAGES = ["en"]; // English default for selection highlighting
+
+// Minimum TMDB vote count for an item to appear in the deck, applied regardless
+// of session filters. Filters out near-zero-rated shovelware (much of which is
+// low-budget erotic content) while rarely excluding legitimate films.
+export const MIN_VOTE_COUNT = 15;
+
+// TMDB keyword search terms whose matching keyword IDs are excluded from
+// discover results via `without_keywords`, applied regardless of session filters.
+export const EXCLUDED_CONTENT_KEYWORDS = [
+    "erotic",
+    "erotica",
+    "softcore",
+    "sexploitation",
+    "softcore pornography",
+];

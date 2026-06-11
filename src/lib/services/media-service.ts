@@ -11,6 +11,7 @@ import { deckCache } from "./deck-cache";
 import { logger } from "@/lib/logger";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 import { config } from "@/lib/config";
+import { MIN_VOTE_COUNT } from "@/lib/constants";
 
 const GLOBAL_EXCLUDED_LANGUAGES: string[] = config.EXCLUDED_LANGUAGES
   ? config.EXCLUDED_LANGUAGES.split(",").map(l => l.trim().toLowerCase()).filter(Boolean)
@@ -895,6 +896,10 @@ export class MediaService {
         !item.Language || GLOBAL_ALLOWED_LANGUAGES.includes(item.Language.toLowerCase())
       );
     }
+
+    result = result.filter(item =>
+      item.VoteCount === undefined || item.VoteCount >= MIN_VOTE_COUNT
+    );
 
     if (!filters) return result;
 

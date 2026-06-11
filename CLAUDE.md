@@ -2,6 +2,10 @@
 
 This file is the authoritative reference for Claude Code sessions. It supersedes `AGENTS.md` for AI-assisted work (do not delete `AGENTS.md` — it may be used by other tools).
 
+## PR Policy
+
+**Never open pull requests against the upstream repo** (`m3sserstudi0s/swiparr`, the repo this project was forked from). All PRs must target the user's own repo (`camerondutra/swiparr`), typically against its `master` branch.
+
 ## Project Overview
 
 **Swiparr** is a Tinder-like media discovery tool for Jellyfin, Emby, Plex, and TMDB. Users swipe on movies/shows in real-time multiplayer sessions; a match triggers when all session members swipe right on the same item.

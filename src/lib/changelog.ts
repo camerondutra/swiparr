@@ -9,6 +9,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.3.8",
+    date: "2026-06-11",
+    changes: [
+      { type: "fix", description: "TV shows now respect the language filter, so non-English shows no longer slip into the deck" },
+      { type: "improvement", description: "By default, only English-language movies and shows are shown (configurable via TMDB_LANGUAGES), and adult content is explicitly excluded from results" },
+      { type: "improvement", description: "Filtered out low-quality, near-unrated titles and content tagged as erotic/softcore so they no longer appear in the deck" },
+    ],
+  },
+  {
     version: "1.3.7",
     date: "2026-04-01",
     changes: [

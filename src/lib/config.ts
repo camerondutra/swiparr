@@ -40,7 +40,10 @@ const envSchema = z.object({
   TMDB_DEFAULT_REGION: z.string().optional(),
   PLEX_TOKEN: z.string().optional(),
   EXCLUDED_LANGUAGES: z.string().optional(),
-  TMDB_LANGUAGES: z.string().optional(),
+  // Global allow-list of original-language codes (comma-separated). Applied to all
+  // media regardless of session filters to keep non-English content (e.g. Indian
+  // cinema, obscure foreign erotica) from appearing by default.
+  TMDB_LANGUAGES: z.string().default("en"),
 
   // UI / Proxy
   URL_BASE_PATH: z.string().default(''),

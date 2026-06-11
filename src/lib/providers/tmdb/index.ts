@@ -19,7 +19,7 @@ import {
 } from "@/types/media";
 import { TmdbSearchResponseSchema, TmdbTvSearchResponseSchema } from "../schemas";
 import { logger } from "@/lib/logger";
-import { DEFAULT_THEMES } from "@/lib/constants";
+import { DEFAULT_THEMES, MIN_VOTE_COUNT, EXCLUDED_CONTENT_KEYWORDS } from "@/lib/constants";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 
 /**
@@ -30,6 +30,8 @@ import { getRuntimeConfig } from "@/lib/runtime-config";
 export class TmdbProvider implements MediaProvider {
   readonly name: string = "tmdb";
   private apiKey: string;
+  // Cached across instances/requests since TMDB keyword IDs are stable.
+  private static excludedKeywordIdsPromise: Promise<number[]> | null = null;
   
   readonly capabilities: ProviderCapabilities = {
     hasAuth: false,
@@ -45,6 +47,23 @@ export class TmdbProvider implements MediaProvider {
 
   constructor(token?: string) {
     this.apiKey = token || appConfig.TMDB_ACCESS_TOKEN || '';
+  }
+
+  // Resolves EXCLUDED_CONTENT_KEYWORDS to TMDB keyword IDs for use with `without_keywords`.
+  private async getExcludedKeywordIds(): Promise<number[]> {
+    if (!TmdbProvider.excludedKeywordIdsPromise) {
+        TmdbProvider.excludedKeywordIdsPromise = Promise.all(
+            EXCLUDED_CONTENT_KEYWORDS.map(async (term) => {
+                try {
+                    const data = await this.fetchTmdb<any>('search/keyword', { query: term });
+                    return data.results?.[0]?.id as number | undefined;
+                } catch {
+                    return undefined;
+                }
+            })
+        ).then(ids => ids.filter((id): id is number => typeof id === 'number'));
+    }
+    return TmdbProvider.excludedKeywordIdsPromise;
   }
 
   private async fetchTmdb<T>(path: string, params: Record<string, any> = {}): Promise<T> {
@@ -75,12 +94,12 @@ export class TmdbProvider implements MediaProvider {
     if (filters.searchTerm) {
         const results: MediaItem[] = [];
         if (mediaType === "movie" || mediaType === "both") {
-            const data = await this.fetchTmdb<any>('search/movie', { query: filters.searchTerm, page });
+            const data = await this.fetchTmdb<any>('search/movie', { query: filters.searchTerm, page, include_adult: false });
             const res = TmdbSearchResponseSchema.parse(data);
             results.push(...res.results.map(m => this.mapMovieToMediaItem(m, genreNameMap)));
         }
         if (mediaType === "tv" || mediaType === "both") {
-            const data = await this.fetchTmdb<any>('search/tv', { query: filters.searchTerm, page });
+            const data = await this.fetchTmdb<any>('search/tv', { query: filters.searchTerm, page, include_adult: false });
             const res = TmdbTvSearchResponseSchema.parse(data);
             results.push(...res.results.map(s => this.mapTvToMediaItem(s, genreNameMap)));
         }
@@ -106,6 +125,7 @@ export class TmdbProvider implements MediaProvider {
 
     // --- Discover ---
     // Docs: https://developer.themoviedb.org/reference/discover-movie-get
+    const excludedKeywordIds = await this.getExcludedKeywordIds();
     const buildDiscoverParams = (type: "movie" | "tv"): Record<string, any> => {
         const sortBy = filters.sortBy === "Popular" ? "popularity.desc" :
                        filters.sortBy === "Top Rated" ? "vote_average.desc" :
@@ -115,7 +135,13 @@ export class TmdbProvider implements MediaProvider {
             page,
             with_genres: filters.genres?.map(name => genreIdMap.get(name)).filter(Boolean).join(','),
             sort_by: sortBy,
+            include_adult: false,
+            'vote_count.gte': MIN_VOTE_COUNT,
         };
+
+        if (excludedKeywordIds.length > 0) {
+            params.without_keywords = excludedKeywordIds.join(',');
+        }
 
         if (filters.watchProviders && filters.watchProviders.length > 0) {
             params.with_watch_providers = filters.watchProviders.join('|');
@@ -409,6 +435,7 @@ export class TmdbProvider implements MediaProvider {
       Language: movie.original_language,
       ProductionYear: movie.release_date ? new Date(movie.release_date).getFullYear() : undefined,
       CommunityRating: movie.vote_average,
+      VoteCount: movie.vote_count,
       ImageTags: {
         Primary: movie.poster_path,
         Backdrop: movie.backdrop_path,
@@ -453,6 +480,7 @@ export class TmdbProvider implements MediaProvider {
       Language: movie.original_language,
       ProductionYear: movie.release_date ? new Date(movie.release_date).getFullYear() : undefined,
       CommunityRating: movie.vote_average,
+      VoteCount: movie.vote_count,
       RunTimeTicks: movie.runtime ? movie.runtime * 60 * 10000000 : undefined,
       Taglines: movie.tagline ? [movie.tagline] : [],
       OfficialRating: officialRating,
@@ -472,8 +500,10 @@ export class TmdbProvider implements MediaProvider {
       Id: `tv-${show.id}`,
       Name: show.name,
       Overview: show.overview,
+      Language: show.original_language,
       ProductionYear: show.first_air_date ? new Date(show.first_air_date).getFullYear() : undefined,
       CommunityRating: show.vote_average,
+      VoteCount: show.vote_count,
       ImageTags: {
         Primary: show.poster_path,
         Backdrop: show.backdrop_path,
@@ -507,8 +537,10 @@ export class TmdbProvider implements MediaProvider {
       Name: show.name,
       OriginalTitle: show.original_name,
       Overview: show.overview,
+      Language: show.original_language,
       ProductionYear: show.first_air_date ? new Date(show.first_air_date).getFullYear() : undefined,
       CommunityRating: show.vote_average,
+      VoteCount: show.vote_count,
       RunTimeTicks: runtime ? runtime * 60 * 10000000 : undefined,
       Taglines: show.tagline ? [show.tagline] : [],
       Genres: show.genres?.map((g: any) => g.name),
