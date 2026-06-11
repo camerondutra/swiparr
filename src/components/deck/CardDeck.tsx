@@ -298,7 +298,7 @@ export function CardDeck() {
   useHotkeys("right", () => handleSwipeAction("right"), { enabled: !isFilterOpen && activeDeck.length > 0 });
   useHotkeys("up", () => activeDeck[0] && openMovie(activeDeck[0].Id, { showLikedBy: false, sessionCode }), { enabled: !isFilterOpen && activeDeck.length > 0 });
 
-  if (isLoadingSession || isTransitioning || (activeDeck.length === 0 && (isLoading || isFetchingNextPage))) {
+  if (isLoadingSession || isTransitioning || (activeDeck.length === 0 && (isLoading || isFetchingNextPage || hasNextPage))) {
     return <DeckLoading />;
   }
 
