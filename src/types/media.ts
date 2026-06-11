@@ -21,6 +21,7 @@ export interface MediaItem {
   ProductionYear?: number;
   CommunityRating?: number;
   CommunityRatingSource?: string;
+  VoteCount?: number;
   Overview?: string;
   Taglines?: string[];
   OfficialRating?: string;

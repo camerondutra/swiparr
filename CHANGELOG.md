@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Content type filter (Movies / TV Shows) was not being applied to the swipe deck — mixed results no longer appear when a filter is active
+- TV shows from TMDB were missing their original-language tag, so the global language filter only applied to movies — non-English TV shows (e.g. Indian dramas) could appear regardless of language settings
+- TMDB requests now explicitly exclude adult content on all search/discover calls
+
+### Changed
+- `TMDB_LANGUAGES` now defaults to `en` (English-only) instead of being unset, so non-English content (e.g. Hindi/Tamil movies, obscure foreign erotica) is filtered out of the deck by default regardless of session filters. Set `TMDB_LANGUAGES` to a comma-separated list of language codes to allow additional languages.
+- TMDB results now require a minimum vote count and exclude titles tagged with erotic/softcore keywords, applied regardless of session filters, to keep low-quality shovelware content out of the deck
 
 ## [1.3.4] - 2026-03-02
 
