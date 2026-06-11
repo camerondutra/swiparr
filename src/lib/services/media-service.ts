@@ -266,7 +266,7 @@ export class MediaService {
     }
     return {
       items: slicedItems,
-      hasMore: !exhausted && items.length >= limit && fetchedItems.length >= providerPageSize
+      hasMore: !exhausted && fetchedItems.length >= providerPageSize
     };
   }
 
@@ -736,7 +736,7 @@ export class MediaService {
     }
     return {
       items: slicedItems,
-      hasMore: !exhausted && items.length >= limit && fetchedItems.length >= providerPageSize
+      hasMore: !exhausted && fetchedItems.length >= providerPageSize
     };
   }
 

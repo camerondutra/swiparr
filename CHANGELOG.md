@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Kick confirmation dialog with a persistent "don't ask again" option
 
 ### Fixed
+- Deck could prematurely show "no more results" even when more items were available, if client-side filtering trimmed a page below the requested size — refreshing was previously needed to recover
 - Content type filter (Movies / TV Shows) was not being applied to the swipe deck — mixed results no longer appear when a filter is active
 - TV shows from TMDB were missing their original-language tag, so the global language filter only applied to movies — non-English TV shows (e.g. Indian dramas) could appear regardless of language settings
 - TMDB requests now explicitly exclude adult content on all search/discover calls
