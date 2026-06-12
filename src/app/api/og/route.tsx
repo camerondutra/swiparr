@@ -80,7 +80,7 @@ export async function GET(req: NextRequest) {
           {join ? (
             <div tw="flex flex-col items-center">
               <div tw="text-5xl font-bold text-white mb-4">
-                You're invited to join a session
+                You&apos;re invited to join a session
               </div>
               <div tw="text-3xl text-[#a0a0a0] mb-5 max-w-3xl text-center leading-normal">
                 Join a session and start swiping on what to watch next together.

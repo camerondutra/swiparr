@@ -420,7 +420,7 @@ export function FilterDrawer({ open, onOpenChange, currentFilters, onSave }: Fil
                   <div className="flex items-center justify-between p-4 rounded-2xl bg-muted/30 border border-border/50">
                     <div className="space-y-0.5">
                       <Label className="text-sm font-semibold tracking-tight">Hide Watched</Label>
-                      <p className="text-xs text-muted-foreground font-medium">Only show items you haven't seen yet</p>
+                      <p className="text-xs text-muted-foreground font-medium">Only show items you haven&apos;t seen yet</p>
                     </div>
                     <Switch
                       checked={unplayedOnly}

@@ -35,12 +35,11 @@ export function CardDeck() {
   const sessionSettings = sessionStatus?.settings;
 
   const { data: stats } = useStats();
-  const { 
-    data: deckData, 
-    isLoading, 
-    isError, 
-    refetch, 
-    isFetching,
+  const {
+    data: deckData,
+    isLoading,
+    isError,
+    refetch,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage
@@ -274,7 +273,7 @@ export function CardDeck() {
       swipedIdsRef.current.delete(id);
       setRemovedIds(prev => prev.filter(rid => rid !== id));
       setLastSwipe(null);
-    } catch (err) {
+    } catch {
       toast.error("Undo failed");
     }
   };

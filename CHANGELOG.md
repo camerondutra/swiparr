@@ -17,10 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Content type filter (Movies / TV Shows) was not being applied to the swipe deck — mixed results no longer appear when a filter is active
 - TV shows from TMDB were missing their original-language tag, so the global language filter only applied to movies — non-English TV shows (e.g. Indian dramas) could appear regardless of language settings
 - TMDB requests now explicitly exclude adult content on all search/discover calls
+- Solo mode with "Random" sort on TMDB could repeat or skip titles across pages because each page picked an unrelated random page server-side — solo Random now builds a stable per-user shuffled deck, matching how group sessions already handle Random
+- `npm run lint` failed with "Invalid project directory provided" because `next lint` no longer exists in Next 16, and the pinned `eslint-config-next`/`eslint` versions resolved to an unrelated legacy package — lint now runs `eslint .` directly with compatible versions
 
 ### Changed
 - `TMDB_LANGUAGES` now defaults to `en` (English-only) instead of being unset, so non-English content (e.g. Hindi/Tamil movies, obscure foreign erotica) is filtered out of the deck by default regardless of session filters. Set `TMDB_LANGUAGES` to a comma-separated list of language codes to allow additional languages.
 - TMDB results now require a minimum vote count and exclude titles tagged with erotic/softcore keywords, applied regardless of session filters, to keep low-quality shovelware content out of the deck
+- Cleaned up a batch of straightforward ESLint findings (unused imports/variables, `let` → `const`, unescaped JSX apostrophes, a `.cjs`-only ESLint override for `require()`) surfaced by the lint script fix above; `npm run lint` problem count reduced from 409 to 376
 
 ## [1.3.4] - 2026-03-02
 

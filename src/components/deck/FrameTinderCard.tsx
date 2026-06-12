@@ -184,11 +184,11 @@ export const FramerTinderCard = forwardRef<TinderCardHandle, TinderCardProps>(
 
         // Calculate a target far off screen based on direction
         const flyVal = 300;
-        let targetX = direction === "left" ? -flyVal : flyVal;
+        const targetX = direction === "left" ? -flyVal : flyVal;
 
         // Calculate Y based on trajectory to make it look like a physics throw
         // We add the velocity to the current Y
-        let targetY = y.get() + (velocityY * 2);
+        const targetY = y.get() + (velocityY * 2);
 
         await controls.start({
           x: targetX,
