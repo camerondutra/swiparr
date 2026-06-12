@@ -16,6 +16,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       { type: "fix", description: "TV shows now respect the language filter, so non-English shows no longer slip into the deck" },
       { type: "improvement", description: "By default, only English-language movies and shows are shown (configurable via TMDB_LANGUAGES), and adult content is explicitly excluded from results" },
       { type: "improvement", description: "Filtered out low-quality, near-unrated titles and content tagged as erotic/softcore so they no longer appear in the deck" },
+      { type: "fix", description: "Solo mode with 'Random' sort could repeat or skip titles when loading more cards — it now shows a stable shuffled order, just like group sessions" },
     ],
   },
   {

@@ -70,7 +70,6 @@ export class MediaService {
     }
 
     const { watchProviders, watchRegion } = await this.resolveWatchProviders(session, sessionFilters, auth, activeProviderName);
-    const defaultSort = activeProviderName === ProviderType.TMDB ? "Popular" : "Trending";
 
     // 3. Handle Search
     if (searchTerm) {
@@ -89,7 +88,7 @@ export class MediaService {
     if (session.sessionCode) {
       return this.getSessionItems(session.sessionCode, sessionFilters, auth, provider, excludeIds, includedLibraries, watchProviders, watchRegion, page, limit, effectiveOffset);
     } else {
-      return this.getSoloItems(sessionFilters, auth, provider, excludeIds, includedLibraries, watchProviders, watchRegion, page, limit, effectiveOffset);
+      return this.getSoloItems(sessionFilters, auth, provider, excludeIds, includedLibraries, watchProviders, watchRegion, page, limit, effectiveOffset, session.user.Id);
     }
   }
 
@@ -105,8 +104,6 @@ export class MediaService {
       });
       
       // Use the host's region as the default for the session if not explicitly set in filters
-      const hostMember = sessionMembersList.find((m: any) => m.externalUserId === session.user.Id); // This might not be the host, but the current user
-      // Actually, sessions table has hostUserId.
       const currentSession = await db.query.sessions.findFirst({ where: eq(sessions.code, session.sessionCode) });
       const hostId = currentSession?.hostUserId;
       
@@ -119,7 +116,7 @@ export class MediaService {
             if (m.externalUserId === hostId && !sessionFilters?.watchRegion) {
                 watchRegion = s.watchRegion || watchRegion;
             }
-          } catch(e) {}
+          } catch {}
         }
       });
 
@@ -142,8 +139,11 @@ export class MediaService {
 
     // Handle deterministic Random sort for group sessions
     if (sortBy === "Random") {
+      const sessionRow = await db.query.sessions.findFirst({ where: eq(sessions.code, sessionCode) });
+      const randomSeed = sessionRow?.randomSeed || sessionCode;
       return this.getDeterministicRandomItems(
         sessionCode,
+        randomSeed,
         sessionFilters,
         auth,
         provider,
@@ -271,7 +271,8 @@ export class MediaService {
   }
 
   private static async getDeterministicRandomItems(
-    sessionCode: string,
+    cacheKey: string,
+    randomSeed: string,
     sessionFilters: Filters | null,
     auth: any,
     provider: any,
@@ -282,18 +283,6 @@ export class MediaService {
     page: number,
     limit: number
   ): Promise<{ items: MediaItem[]; hasMore: boolean }> {
-    // Get session for random seed
-    const session = await db.query.sessions.findFirst({
-      where: eq(sessions.code, sessionCode)
-    });
-
-    if (!session) {
-      throw new Error("Session not found");
-    }
-
-    // Use session's random seed, fallback to code if not present (backwards compatibility)
-    const randomSeed = session.randomSeed || sessionCode;
-
     // Build filter object for cache key
     const filterKey = {
       libraries: includedLibraries,
@@ -315,11 +304,11 @@ export class MediaService {
 
     // Check cache first
     const filtersHash = this.generateFiltersHash(filterKey);
-    let cached = deckCache.getCachedDeck(sessionCode, auth.provider, filterKey);
+    let cached = deckCache.getCachedDeck(cacheKey, auth.provider, filterKey);
 
     if (!cached) {
       // Build the full deck by fetching all items
-      logger.info(`Building deterministic deck for session ${sessionCode} with seed ${randomSeed}`);
+      logger.info(`Building deterministic deck for ${cacheKey} with seed ${randomSeed}`);
       const allItems = await this.fetchAllItemsForDeck(
         provider,
         auth,
@@ -352,9 +341,9 @@ export class MediaService {
         itemsById.set(item.Id, item);
       }
       if (invalidCount > 0) {
-        logger.warn(`Filtered ${invalidCount} invalid items while building deck for session ${sessionCode}`);
+        logger.warn(`Filtered ${invalidCount} invalid items while building deck for ${cacheKey}`);
       }
-      deckCache.setCachedDeck(sessionCode, auth.provider, filterKey, orderedIds, itemsById);
+      deckCache.setCachedDeck(cacheKey, auth.provider, filterKey, orderedIds, itemsById);
 
       cached = { orderedIds, itemsById };
       logger.info(`Deck built with ${orderedIds.length} items`);
@@ -362,7 +351,7 @@ export class MediaService {
 
     // Get paginated results excluding already swiped items
     const result = deckCache.getPaginatedItems(
-      sessionCode,
+      cacheKey,
       auth.provider,
       filterKey,
       excludeIds,
@@ -564,10 +553,6 @@ export class MediaService {
     const seenIds = new Set<string>();
     const maxPages = 25; // TMDB max is 500 pages, but limit to 25 (500 items) for performance
 
-    // Get genres for ID mapping
-    const genres = await provider.getGenres(auth);
-    const genreIdMap = new Map(genres.map((g: any) => [g.Name, g.Id]));
-
     for (let page = 1; page <= maxPages; page++) {
       try {
         const items = await provider.getItems({
@@ -612,9 +597,29 @@ export class MediaService {
     return allItems;
   }
 
-  private static async getSoloItems(sessionFilters: Filters | null, auth: any, provider: any, excludeIds: Set<string>, includedLibraries: string[], watchProviders: string[] | undefined, watchRegion: string, page: number, limit: number, effectiveOffset: number) {
+  private static async getSoloItems(sessionFilters: Filters | null, auth: any, provider: any, excludeIds: Set<string>, includedLibraries: string[], watchProviders: string[] | undefined, watchRegion: string, page: number, limit: number, effectiveOffset: number, userId: string) {
+    const sortBy = sessionFilters?.sortBy || (auth.provider === ProviderType.TMDB || auth.provider === ProviderType.STREAMING ? "Popular" : "Trending");
+
+    // Handle deterministic Random sort, same as group sessions, so pagination
+    // doesn't repeat/skip items across pages (provider-level Math.random() is per-request).
+    if (sortBy === "Random") {
+      return this.getDeterministicRandomItems(
+        `solo:${userId}`,
+        userId,
+        sessionFilters,
+        auth,
+        provider,
+        excludeIds,
+        includedLibraries,
+        watchProviders,
+        watchRegion,
+        page,
+        limit
+      );
+    }
+
     const soloYears = sessionFilters?.yearRange ? Array.from({ length: (sessionFilters.yearRange[1] ?? 2025) - (sessionFilters.yearRange[0] ?? 1900) + 1 }, (_, i) => (sessionFilters.yearRange?.[0] ?? 1900) + i) : undefined;
-    
+
     // If we have filters but the provider might not support them all (like Plex), 
     // we fetch more items to ensure we have enough after client-side filtering.
     const fetchLimit = (sessionFilters && (
@@ -664,7 +669,7 @@ export class MediaService {
         runtimeRange: sessionFilters?.runtimeRange,
         watchProviders,
         watchRegion,
-        sortBy: sessionFilters?.sortBy || (auth.provider === ProviderType.TMDB || auth.provider === ProviderType.STREAMING ? "Popular" : "Trending"),
+        sortBy,
         themes: sessionFilters?.themes,
         excludedThemes: sessionFilters?.excludedThemes,
         tmdbLanguages: sessionFilters?.tmdbLanguages,
@@ -767,7 +772,7 @@ export class MediaService {
             return DEFAULT_RATINGS.map(r => ({ Name: r, Value: r }));
         }
         return ratings;
-    } catch (e) {
+    } catch {
         const { DEFAULT_RATINGS } = await import("@/lib/constants");
         return DEFAULT_RATINGS.map(r => ({ Name: r, Value: r }));
     }
@@ -784,13 +789,13 @@ export class MediaService {
             return DEFAULT_GENRES;
         }
         return genres;
-    } catch (e) {
+    } catch {
         const { DEFAULT_GENRES } = await import("@/lib/constants");
         return DEFAULT_GENRES;
     }
   }
 
-  static async getThemes(session: SessionData) {
+  static async getThemes() {
     const { DEFAULT_THEMES } = await import("@/lib/constants");
     return DEFAULT_THEMES;
   }
@@ -830,7 +835,7 @@ export class MediaService {
       return a.Name.localeCompare(b.Name);
     });
 
-    let memberSelections: Record<string, string[]> = {};
+    const memberSelections: Record<string, string[]> = {};
     let members: { externalUserId: string, externalUserName: string }[] = [];
     let accumulatedProviderIds: string[] = [];
 
@@ -854,7 +859,7 @@ export class MediaService {
                             memberSelections[pId].push(m.externalUserId);
                         }
                     }
-                } catch (e) {}
+                } catch {}
             }
         }
         accumulatedProviderIds = Object.keys(memberSelections);
